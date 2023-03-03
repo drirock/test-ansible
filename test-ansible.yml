@@ -1,0 +1,8 @@
+---
+- name: Test ansible
+  hosts: server_list
+  gather_facts: yes
+
+  roles:
+    - test
+  force_handlers: True

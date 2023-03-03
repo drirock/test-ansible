@@ -1,0 +1,26 @@
+#- name: Check freespace
+#  shell: df /run --output\=avail | tail -1
+#  register: check_freespace
+#      
+#- fail:
+#   msg: /run does not have the minimum space required to continue (3Gb requested). 
+#  when: check_freespace.stdout lt 3000000
+##########
+#- name: Test disk space available
+#  assert:
+#    that:
+#        - item.mount != '/' or {{ item.mount == '/' and item.size_available > (item.size_total|float * 0.4) }}
+#  with_items: '{{ ansible_mounts }}'
+#  ignore_errors: yes
+#  register: disk_free
+########
+- name: Check /tmp freespace
+  shell: df /tmp --output\=avail | tail -1
+  register: disk_free
+
+- debug: var=disk_free.stdout
+
+- name: Fail when disk space needs attention
+  fail:
+     msg: 'Disk space needs attention.'
+  when: 'disk_free.stdout | int < 400000000000'
