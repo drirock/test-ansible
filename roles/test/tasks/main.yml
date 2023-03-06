@@ -1,60 +1,34 @@
-#- name: Check freespace
-#  shell: df /run --output\=avail | tail -1
-#  register: check_freespace
-#      
-#- fail:
-#   msg: /run does not have the minimum space required to continue (3Gb requested). 
-#  when: check_freespace.stdout lt 3000000
-##########
-#- name: Test disk space available
-#  assert:
-#    that:
-#        - item.mount != '/' or {{ item.mount == '/' and item.size_available > (item.size_total|float * 0.4) }}
-#  with_items: '{{ ansible_mounts }}'
-#  ignore_errors: yes
-#  register: disk_free
-########
-#- name: Check /tmp freespace
-#  shell: df -BM {{ tmppath }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
-#  register: disk_free
-#
-#- name: Check /root freespace
-#  shell: df -BM {{ tmppath2 }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
-#  register: disk_free2
-#
-#- debug: var=disk_free.stdout
-#- debug: var=disk_free2.stdout
-#
-#- name: Fail when disk space needs attention
-#  fail:
-#      msg: "Disk space needs attention.\nFree {{disk_free.stdout}}/800M and Free {{disk_free2.stdout}}/800M"
-#  when: 'disk_free.stdout | int < 800 and disk_free2.stdout | int < 800'
-
-- name: Check /tmp freespace
+# Verifico il primo fs impostato in vars
+- name: Check {{ tmppath }} freespace
   shell: df -BM {{ tmppath }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
   register: disk_free
 
+# Verifico il secondo fs impostato in vars
 - name: Check /root freespace
   shell: df -BM {{ tmppath2 }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
   register: disk_free2
 
+# Imposto il primo fs se ha piu' di 800Mb liberi ed il secondo ne ha meno di 800Mb
 - name: Set filesystem {{ tmppath }} 
   set_fact:
    tmppath_finale: "{{tmppath}}"
-  when: 'disk_free.stdout | int > 800'
+  when: 'disk_free.stdout | int > 800 and disk_free2.stdout | int < 800'
 
+# Imposto il secondo fs se ha piu' di 800Mb liberi ed il primo ne ha meno di 800Mb
 - name: Set filesystem {{ tmppath2 }}
   set_fact:
    tmppath_finale: "{{tmppath2}}"
   when: 'disk_free2.stdout | int > 800 and disk_free.stdout | int < 800'
 
+# Mostro a video i dati
 - debug: var=tmppath
 - debug: var=disk_free.stdout
 - debug: var=tmppath2
 - debug: var=disk_free2.stdout
 - debug: var=tmppath_finale
 
+# Mostro a video il fallimento nel caso entrambi i fs siano inferiori a 800 Mb
 - name: Fail when disk space needs attention
   fail:
-      msg: "Disk space needs attention.\nFree {{disk_free.stdout}}/800M and Free {{disk_free2.stdout}}/800M"
+      msg: "Disk space needs attention.\n {{ tmppath }} Free {{disk_free.stdout}}/800M and {{ tmppath2 }} Free {{disk_free2.stdout}}/800M"
   when: 'disk_free.stdout | int < 800 and disk_free2.stdout | int < 800'
