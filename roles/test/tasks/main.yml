@@ -22,5 +22,5 @@
 
 - name: Fail when disk space needs attention
   fail:
-     msg: 'Disk space needs attention.'
+      msg: "Disk space needs attention. Free {{disk_free.stdout}}"
   when: 'disk_free.stdout | int < 400000000000'
