@@ -14,13 +14,47 @@
 #  ignore_errors: yes
 #  register: disk_free
 ########
+#- name: Check /tmp freespace
+#  shell: df -BM {{ tmppath }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
+#  register: disk_free
+#
+#- name: Check /root freespace
+#  shell: df -BM {{ tmppath2 }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
+#  register: disk_free2
+#
+#- debug: var=disk_free.stdout
+#- debug: var=disk_free2.stdout
+#
+#- name: Fail when disk space needs attention
+#  fail:
+#      msg: "Disk space needs attention.\nFree {{disk_free.stdout}}/800M and Free {{disk_free2.stdout}}/800M"
+#  when: 'disk_free.stdout | int < 800 and disk_free2.stdout | int < 800'
+
 - name: Check /tmp freespace
-  shell: df /tmp --output\=avail | tail -1
+  shell: df -BM {{ tmppath }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
   register: disk_free
 
+- name: Check /root freespace
+  shell: df -BM {{ tmppath2 }} | awk '{print $4}' | tail -n 1 | cut -d'M' -f1
+  register: disk_free2
+
+- name: Set filesystem {{ tmppath }} 
+  set_fact:
+   tmppath_finale: "{{tmppath}}"
+  when: 'disk_free.stdout | int > 800'
+
+- name: Set filesystem {{ tmppath2 }}
+  set_fact:
+   tmppath_finale: "{{tmppath2}}"
+  when: 'disk_free2.stdout | int > 800 and disk_free.stdout | int < 800'
+
+- debug: var=tmppath
 - debug: var=disk_free.stdout
+- debug: var=tmppath2
+- debug: var=disk_free2.stdout
+- debug: var=tmppath_finale
 
 - name: Fail when disk space needs attention
   fail:
-      msg: "Disk space needs attention. Free {{disk_free.stdout}}"
-  when: 'disk_free.stdout | int < 400000000000'
+      msg: "Disk space needs attention.\nFree {{disk_free.stdout}}/800M and Free {{disk_free2.stdout}}/800M"
+  when: 'disk_free.stdout | int < 800 and disk_free2.stdout | int < 800'
